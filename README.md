@@ -9,6 +9,11 @@ generated clip is retargeted onto a skinned humanoid and played back in the
 same scene, where it can be directed further (re-prompted, cut, chained,
 moved).
 
+## Report and demo video
+
+- **Report** (Serbian): [`docs/izvestaj.pdf`](docs/izvestaj.pdf)
+- **Demo video** — *Interaktivno generisanje ljudskog pokreta u virtuelnoj stvarnosti*:
+  [`docs/demo.mp4`](docs/demo.mp4) (stored with Git LFS — `git lfs pull` after cloning if it shows up as a small pointer file)
 
 ## Repository layout
 
@@ -19,6 +24,7 @@ moved).
 | `kimodo-unity/` | Unity bridge package sample (`com.aminhp.kimodobridge`) used by the client for retargeting |
 | `data/embedding_cache/` | cached prompt embeddings — cached prompts generate instantly; `index.json` lists them |
 | `data/sessions/<id>/` | every generation: `request.json`, `constraints.json`, `motion.npz` |
+| `docs/izvestaj.pdf`, `docs/demo.mp4` | course report (Serbian) and the demo video (LFS) |
 | `docs/unity-setup.md` | notes on the bridge package / earlier setup |
 | **Unity project** | lives outside the repo at `C:\Users\$user\KimodoUnity` (see *Sharing* below); our scripts are `Assets/KimodoVR/*.cs` |
 
