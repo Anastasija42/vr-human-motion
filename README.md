@@ -26,7 +26,7 @@ moved).
 | `data/sessions/<id>/` | every generation: `request.json`, `constraints.json`, `motion.npz` |
 | `docs/izvestaj.pdf`, `docs/demo.mp4` | course report (Serbian) and the demo video (LFS) |
 | `docs/unity-setup.md` | notes on the bridge package / earlier setup |
-| **Unity project** | lives outside the repo at `C:\Users\$user\KimodoUnity` (see *Sharing* below); our scripts are `Assets/KimodoVR/*.cs` |
+| **Unity project** | lives outside the repo at `C:\Users\$user\KimodoUnity` |
 
 The client-side logic is four scripts in `Assets/KimodoVR/`:
 `KimodoVR.cs` (capture, HUD/VR UI, planning, request building, direction),
