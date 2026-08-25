@@ -1,6 +1,6 @@
 # Unity setup — Kimodo authoring with the bridge in WSL
 
-The plugin project is copied to **`C:\Users\anast\KimodoUnity`** (Windows-side
+The plugin project is copied to **`C:\Users\$user\KimodoUnity`** (Windows-side
 copy of `kimodo-unity/`; Unity should not open projects across `\\wsl$`).
 
 The bridge server runs in WSL from our venv — Unity just connects to it:
@@ -14,7 +14,7 @@ TEXT_ENCODER_DEVICE=cpu PYTHONPATH=. ~/vr-human-motion/.venv/bin/python \
 
 ## Steps in Unity (on Windows)
 
-1. **Unity Hub → Open → `C:\Users\anast\KimodoUnity`.**
+1. **Unity Hub → Open → `C:\Users\$user\KimodoUnity`.**
    The project was made with Unity **6000.4.4f1**; if your installed 6000.x
    differs, Hub offers to open/upgrade with your version — accept.
 2. Open `Assets/Scenes/SampleScene.unity`.
