@@ -31,3 +31,6 @@ docs/report/*.out
 docs/report/*.bbl
 docs/report/*.blg
 docs/report/*.pdf
+
+# course report stays local
+docs/report/

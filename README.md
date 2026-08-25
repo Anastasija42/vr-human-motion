@@ -19,8 +19,6 @@ retarget (Mecanim) + contact IK, route planning, room/furniture containment,
 per-person direction (re-prompt, cut, follow-up chain, move/rotate/delete)
 ```
 
-Course project (VR): the Serbian report lives in `docs/report/overleaf_sr.tex`.
-
 ## Repository layout
 
 | path | what |
@@ -30,7 +28,6 @@ Course project (VR): the Serbian report lives in `docs/report/overleaf_sr.tex`.
 | `kimodo-unity/` | Unity bridge package sample (`com.aminhp.kimodobridge`) used by the client for retargeting |
 | `data/embedding_cache/` | cached prompt embeddings — cached prompts generate instantly; `index.json` lists them |
 | `data/sessions/<id>/` | every generation: `request.json`, `constraints.json`, `motion.npz` |
-| `docs/report/` | LaTeX report (Serbian), figures, figure generators |
 | `docs/unity-setup.md` | notes on the bridge package / earlier setup |
 | **Unity project** | lives outside the repo at `C:\Users\anast\KimodoUnity` (see *Sharing* below); our scripts are `Assets/KimodoVR/*.cs` |
 
@@ -140,8 +137,7 @@ Movie, Game View, 1080p) or OBS.
    on first use (Kimodo is an NVIDIA Open Model; Llama-3 requires accepting
    Meta's license). `data/embedding_cache/` (a few MB) is worth committing so
    the curated prompts stay instant.
-4. Push to GitHub; the report PDF builds from `docs/report/overleaf_sr.tex`
-   (or upload that folder to Overleaf).
+4. Push to GitHub.
 
 ## Known limitations
 
@@ -149,4 +145,4 @@ The model has no scene awareness (only the root path avoids furniture — arms
 can clip during free gestures); poses come from three tracked points (hands +
 head), so elbows and hand orientation are the model's choice; follow-up clips
 switch at a cut boundary without pose blending; Kimodo is kinematic — physical
-feasibility is not guaranteed. See the report's *Diskusija* and *Ograničenja*.
+feasibility is not guaranteed.
