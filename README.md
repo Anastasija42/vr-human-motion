@@ -11,9 +11,9 @@ moved).
 
 ## Report and demo video
 
-- **Report** (Serbian): [`docs/izvestaj.pdf`](docs/izvestaj.pdf)
+- **Report** : [`docs/izvestaj.pdf`](docs/izvestaj.pdf)
 - **Demo video** — *Interaktivno generisanje ljudskog pokreta u virtuelnoj stvarnosti*:
-  [`docs/demo.mp4`](docs/demo.mp4) (stored with Git LFS — `git lfs pull` after cloning if it shows up as a small pointer file)
+  [`docs/demo.mp4`](docs/demo.mp4)
 
 ## Repository layout
 
