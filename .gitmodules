@@ -1,0 +1,3 @@
+[submodule "kimodo-unity"]
+	path = kimodo-unity
+	url = https://github.com/Amin-HP/Kimodo-Unity.git
