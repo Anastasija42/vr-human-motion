@@ -12,7 +12,6 @@ data/embedding_cache/archive/
 # (see README); comment this line out if you vendor it into the repo
 kimodo-src/
 
-# unity (if the project is copied under unity/)
 unity/**/Library/
 unity/**/Temp/
 unity/**/Logs/
@@ -24,7 +23,6 @@ unity/**/*.sln
 unity/**/*.slnx
 unity/**/KimodoConfigs/
 
-# latex
 docs/report/*.aux
 docs/report/*.log
 docs/report/*.out
@@ -32,5 +30,4 @@ docs/report/*.bbl
 docs/report/*.blg
 docs/report/*.pdf
 
-# course report stays local
 docs/report/
