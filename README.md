@@ -2,22 +2,13 @@
 
 Generate plausible, controllable full-body human motion for a virtual scene
 (a lab with tables and Franka Panda robots) by **demonstrating** the spatial
-part of a task in VR — walk a path, tap where the hand should touch, strike a
-pose — and describing the rest with a text prompt. The demonstration becomes a
+part of a task in VR (walk a path, tap where the hand should touch, strike a
+pose) and describing the rest with a text prompt. The demonstration becomes a
 set of kinematic constraints for **NVIDIA Kimodo** (motion diffusion); the
 generated clip is retargeted onto a skinned humanoid and played back in the
 same scene, where it can be directed further (re-prompted, cut, chained,
 moved).
 
-```
-Unity client (Windows)                       WSL2 server (this repo)
-──────────────────────                       ───────────────────────
-VR / desktop demonstration  ──JSON──►  constraints → Kimodo diffusion →
-  walk dots · touch points             foot-skate cleanup + constraint snap
-  poses · text prompt       ◄──JSON──  quats + root path (flat arrays)
-retarget (Mecanim) + contact IK, route planning, room/furniture containment,
-per-person direction (re-prompt, cut, follow-up chain, move/rotate/delete)
-```
 
 ## Repository layout
 
@@ -29,7 +20,7 @@ per-person direction (re-prompt, cut, follow-up chain, move/rotate/delete)
 | `data/embedding_cache/` | cached prompt embeddings — cached prompts generate instantly; `index.json` lists them |
 | `data/sessions/<id>/` | every generation: `request.json`, `constraints.json`, `motion.npz` |
 | `docs/unity-setup.md` | notes on the bridge package / earlier setup |
-| **Unity project** | lives outside the repo at `C:\Users\anast\KimodoUnity` (see *Sharing* below); our scripts are `Assets/KimodoVR/*.cs` |
+| **Unity project** | lives outside the repo at `C:\Users\$user\KimodoUnity` (see *Sharing* below); our scripts are `Assets/KimodoVR/*.cs` |
 
 The client-side logic is four scripts in `Assets/KimodoVR/`:
 `KimodoVR.cs` (capture, HUD/VR UI, planning, request building, direction),
@@ -72,7 +63,7 @@ went stale (typical after the laptop slept) — just restart the process.
 
 ## Unity setup (Windows)
 
-1. Open the project in Unity Hub (`C:\Users\anast\KimodoUnity`).
+1. Open the project in Unity Hub (`C:\Users\$user\KimodoUnity`).
 2. Open your scene (e.g. `Assets/lab.unity`). On the **KimodoVR** component:
    - **Character Prefab** — a Humanoid-rigged FBX (Mixamo works; Rig → Humanoid).
    - **Scene Surfaces** — table tops, shelves, or invisible *areas* (an empty
@@ -115,34 +106,3 @@ went stale (typical after the laptop slept) — just restart the process.
 
 Keep prompts full sentences ("A person crouches and reaches forward.") — terse
 words ("Jump.") are out of the model's distribution and act sluggish.
-
-## Recording a demo
-
-Press **F3** twice (SMOOTH FOLLOW: a wide, stabilized copy of the VR view) and
-record the Game window — with Unity Recorder (Window → General → Recorder →
-Movie, Game View, 1080p) or OBS.
-
-## Sharing the project
-
-1. `git init` here — `.gitignore` already excludes the venv, sessions, logs and
-   the upstream `kimodo-src/` (collaborators clone it per the setup above; or
-   delete that line to vendor it).
-2. Bring the Unity project in: copy `C:\Users\anast\KimodoUnity` to `unity/KimodoUnity`
-   **without** `Library/`, `Temp/`, `Logs/`, `obj/`, `UserSettings/`,
-   `Recordings/`, `*.csproj`, `*.slnx` (all ignored by `.gitignore`). Unity
-   rebuilds `Library/` on first open. The asset packs (furniture, character)
-   are large — if the repo must stay small, list them in a `unity/ASSETS.md`
-   with their store links instead of committing them.
-3. Model weights are **not** part of the repo — they download from Hugging Face
-   on first use (Kimodo is an NVIDIA Open Model; Llama-3 requires accepting
-   Meta's license). `data/embedding_cache/` (a few MB) is worth committing so
-   the curated prompts stay instant.
-4. Push to GitHub.
-
-## Known limitations
-
-The model has no scene awareness (only the root path avoids furniture — arms
-can clip during free gestures); poses come from three tracked points (hands +
-head), so elbows and hand orientation are the model's choice; follow-up clips
-switch at a cut boundary without pose blending; Kimodo is kinematic — physical
-feasibility is not guaranteed.
