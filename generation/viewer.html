@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VR Human Motion — waypoint author</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color: #eee;
+               font: 14px/1.4 system-ui, sans-serif; }
+  #scene { position: absolute; inset: 0; }
+  #panel { position: absolute; top: 12px; left: 12px; width: 320px; background: #1b1d22ee;
+           border: 1px solid #333; border-radius: 10px; padding: 14px; z-index: 2; }
+  #panel h1 { font-size: 15px; margin: 0 0 8px; }
+  textarea { width: 100%; box-sizing: border-box; background: #101216; color: #eee;
+             border: 1px solid #444; border-radius: 6px; padding: 8px; font: inherit; resize: vertical; }
+  label { display: block; margin-top: 8px; color: #aaa; font-size: 12px; }
+  input[type=number] { width: 70px; background: #101216; color: #eee; border: 1px solid #444;
+                       border-radius: 6px; padding: 4px 6px; font: inherit; }
+  .row { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+  button { background: #2f6feb; color: #fff; border: 0; border-radius: 6px; padding: 8px 14px;
+           font: inherit; cursor: pointer; margin-top: 10px; }
+  button.secondary { background: #30343b; }
+  button:disabled { opacity: .5; cursor: default; }
+  #status { margin-top: 10px; font-size: 12px; color: #9fb3c8; min-height: 30px; white-space: pre-wrap; }
+  #pbar { display: none; margin-top: 6px; height: 6px; background: #101216; border-radius: 3px; overflow: hidden; }
+  #pfill { height: 100%; width: 0%; background: #2f6feb; border-radius: 3px; transition: width .3s; }
+  #pphase { display: none; margin-top: 8px; font-size: 12px; color: #ffb454; }
+  #transport { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+               display: none; align-items: center; gap: 10px; background: #1b1d22ee; border: 1px solid #333;
+               border-radius: 10px; padding: 8px 14px; z-index: 2; }
+  #scrub { width: 320px; }
+  .hint { color: #778; font-size: 12px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+
+<div id="panel">
+  <h1>🕺 Waypoint motion author</h1>
+  <div class="hint">Right-drag orbits, wheel zooms. Click the floor for path waypoints, or the table for hand targets.</div>
+  <div class="row" style="margin-top:8px">
+    <button id="modePath" class="secondary" style="margin-top:0">🚶 Path</button>
+    <button id="modeHand" class="secondary" style="margin-top:0">✋ Hand</button>
+  </div>
+  <label>Natural-language command</label>
+  <textarea id="prompt" rows="2">a person walks forward, then crouches down to inspect something</textarea>
+  <label>Cached prompts (instant — no encoder)</label>
+  <select id="cachedPrompts" style="width:100%;background:#101216;color:#eee;border:1px solid #444;border-radius:6px;padding:6px">
+    <option value="">— pick a cached prompt —</option>
+  </select>
+  <div class="row">
+    <label>Duration (s) <input id="duration" type="number" value="6" min="1" max="30" step="0.5"></label>
+    <label>Steps <input id="steps" type="number" value="50" min="10" max="200" step="10"></label>
+  </div>
+  <div class="row">
+    <button id="generate">Generate</button>
+    <button id="clear" class="secondary">Clear path</button>
+  </div>
+  <div id="status">Server: checking…</div>
+  <div id="pphase"></div>
+  <div id="pbar"><div id="pfill"></div></div>
+</div>
+
+<div id="transport">
+  <button id="play" class="secondary">⏸</button>
+  <input id="scrub" type="range" min="0" max="1" step="1" value="0">
+  <span id="frameLabel">0</span>
+</div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x14161a);
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.05, 200);
+camera.position.set(4, 3.2, 6);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+document.getElementById('scene').appendChild(renderer.domElement);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.9, 0);
+controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+
+scene.add(new THREE.HemisphereLight(0xcfd8ff, 0x24262b, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+sun.position.set(5, 8, 3);
+scene.add(sun);
+const grid = new THREE.GridHelper(20, 40, 0x3a3f4a, 0x262a32);
+scene.add(grid);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20),
+  new THREE.MeshBasicMaterial({ visible: false }));
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
+
+// A table to trace on: 1.2 x 0.7 m top, surface at y = 0.75.
+const table = new THREE.Group();
+const top = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 0.7),
+  new THREE.MeshStandardMaterial({ color: 0x5c4a36 }));
+top.position.set(0, 0.73, 1.4);
+table.add(top);
+[[-0.55, 1.1], [0.55, 1.1], [-0.55, 1.7], [0.55, 1.7]].forEach(([x, z]) => {
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.71),
+    new THREE.MeshStandardMaterial({ color: 0x453729 }));
+  leg.position.set(x, 0.355, z);
+  table.add(leg);
+});
+scene.add(table);
+
+// ---- waypoints -------------------------------------------------------------
+const waypoints = [];       // {x, z}
+const wpGroup = new THREE.Group();
+scene.add(wpGroup);
+const pathLine = new THREE.Line(
+  new THREE.BufferGeometry(),
+  new THREE.LineBasicMaterial({ color: 0x2f6feb }));
+scene.add(pathLine);
+
+function redrawPath() {
+  wpGroup.clear();
+  waypoints.forEach((w, i) => {
+    const m = new THREE.Mesh(
+      new THREE.SphereGeometry(0.06, 16, 12),
+      new THREE.MeshStandardMaterial({ color: i === 0 ? 0x37d67a : 0x2f6feb }));
+    m.position.set(w.x, 0.06, w.z);
+    wpGroup.add(m);
+  });
+  pathLine.geometry.setFromPoints(waypoints.map(w => new THREE.Vector3(w.x, 0.05, w.z)));
+}
+
+// ---- hand keys -------------------------------------------------------------
+const handKeys = [];        // {x, y, z}
+const handGroup = new THREE.Group();
+scene.add(handGroup);
+const handLine = new THREE.Line(
+  new THREE.BufferGeometry(),
+  new THREE.LineBasicMaterial({ color: 0xff8c42 }));
+scene.add(handLine);
+
+function redrawHand() {
+  handGroup.clear();
+  handKeys.forEach((k) => {
+    const m = new THREE.Mesh(
+      new THREE.SphereGeometry(0.025, 16, 12),
+      new THREE.MeshStandardMaterial({ color: 0xff8c42 }));
+    m.position.set(k.x, k.y + 0.01, k.z);
+    handGroup.add(m);
+  });
+  handLine.geometry.setFromPoints(handKeys.map(k => new THREE.Vector3(k.x, k.y + 0.01, k.z)));
+}
+
+let mode = 'path';
+const modePathBtn = document.getElementById('modePath');
+const modeHandBtn = document.getElementById('modeHand');
+function setMode(m) {
+  mode = m;
+  modePathBtn.style.background = m === 'path' ? '#2f6feb' : '#30343b';
+  modeHandBtn.style.background = m === 'hand' ? '#2f6feb' : '#30343b';
+}
+modePathBtn.onclick = () => setMode('path');
+modeHandBtn.onclick = () => setMode('hand');
+setMode('path');
+
+const ray = new THREE.Raycaster();
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+  ray.setFromCamera(new THREE.Vector2(
+    (e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), camera);
+  if (mode === 'hand') {
+    const hit = ray.intersectObject(top)[0];
+    if (hit) {
+      handKeys.push({ x: +hit.point.x.toFixed(3), y: +hit.point.y.toFixed(3), z: +hit.point.z.toFixed(3) });
+      redrawHand();
+    }
+    return;
+  }
+  const hit = ray.intersectObject(floor)[0];
+  if (hit) { waypoints.push({ x: +hit.point.x.toFixed(3), z: +hit.point.z.toFixed(3) }); redrawPath(); }
+});
+document.getElementById('clear').onclick = () => {
+  waypoints.length = 0; redrawPath();
+  handKeys.length = 0; redrawHand();
+};
+
+// ---- skeleton playback -----------------------------------------------------
+let motion = null;          // {fps, frames [T][J][3], parents}
+let boneLines = null, jointDots = null;
+let frame = 0, playing = true, lastTick = 0;
+
+function buildFigure(J, parents) {
+  if (boneLines) { scene.remove(boneLines); scene.remove(jointDots); }
+  const bonePairs = [];
+  parents.forEach((p, j) => { if (p >= 0) bonePairs.push([j, p]); });
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(bonePairs.length * 6), 3));
+  boneLines = new THREE.LineSegments(lineGeo,
+    new THREE.LineBasicMaterial({ color: 0xffb454 }));
+  boneLines.userData.pairs = bonePairs;
+  scene.add(boneLines);
+  const dotGeo = new THREE.BufferGeometry();
+  dotGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(J * 3), 3));
+  jointDots = new THREE.Points(dotGeo,
+    new THREE.PointsMaterial({ color: 0xffe0a3, size: 0.035 }));
+  scene.add(jointDots);
+}
+
+function setFrame(f) {
+  frame = f;
+  const joints = motion.frames[f];
+  const lp = boneLines.geometry.attributes.position.array;
+  boneLines.userData.pairs.forEach(([a, b], i) => {
+    lp.set(joints[a], i * 6); lp.set(joints[b], i * 6 + 3);
+  });
+  boneLines.geometry.attributes.position.needsUpdate = true;
+  const dp = jointDots.geometry.attributes.position.array;
+  joints.forEach((j, i) => dp.set(j, i * 3));
+  jointDots.geometry.attributes.position.needsUpdate = true;
+  scrub.value = f;
+  frameLabel.textContent = `${f}/${motion.frames.length - 1}`;
+}
+
+const scrub = document.getElementById('scrub');
+const frameLabel = document.getElementById('frameLabel');
+const playBtn = document.getElementById('play');
+scrub.oninput = () => { playing = false; playBtn.textContent = '▶'; setFrame(+scrub.value); };
+playBtn.onclick = () => { playing = !playing; playBtn.textContent = playing ? '⏸' : '▶'; };
+
+function animate(t) {
+  requestAnimationFrame(animate);
+  if (motion && playing && t - lastTick > 1000 / motion.fps) {
+    lastTick = t;
+    setFrame((frame + 1) % motion.frames.length);
+  }
+  controls.update();
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(animate);
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ---- server ----------------------------------------------------------------
+const status = document.getElementById('status');
+const genBtn = document.getElementById('generate');
+
+fetch('/api/health').then(r => r.json())
+  .then(h => status.textContent =
+    `Server: ok (${h.model}${h.loaded ? ', model loaded' : ', model loads on first generate'})`)
+  .catch(() => status.textContent = 'Server: UNREACHABLE — start generation/server.py');
+
+const cachedSel = document.getElementById('cachedPrompts');
+function refreshPrompts() {
+  fetch('/api/prompts').then(r => r.json()).then(d => {
+    cachedSel.length = 1;
+    d.prompts.forEach(p => {
+      const o = document.createElement('option');
+      o.value = o.textContent = p;
+      cachedSel.appendChild(o);
+    });
+  }).catch(() => {});
+}
+refreshPrompts();
+cachedSel.onchange = () => {
+  if (cachedSel.value) document.getElementById('prompt').value = cachedSel.value;
+};
+
+const pphase = document.getElementById('pphase');
+const pbar = document.getElementById('pbar');
+const pfill = document.getElementById('pfill');
+let pollTimer = null;
+
+function startProgressPoll() {
+  pphase.style.display = 'block';
+  pollTimer = setInterval(async () => {
+    try {
+      const p = await (await fetch('/api/progress')).json();
+      if (p.phase === 'idle') return;
+      pphase.textContent = `${p.phase}${p.detail ? ' — ' + p.detail : ''}`;
+      if (p.pct != null) { pbar.style.display = 'block'; pfill.style.width = p.pct + '%'; }
+      else { pbar.style.display = 'none'; }
+    } catch {}
+  }, 500);
+}
+
+function stopProgressPoll() {
+  clearInterval(pollTimer);
+  pphase.style.display = 'none';
+  pbar.style.display = 'none';
+  pfill.style.width = '0%';
+}
+
+genBtn.onclick = async () => {
+  genBtn.disabled = true;
+  const t0 = performance.now();
+  status.textContent = 'Generating…';
+  startProgressPoll();
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: document.getElementById('prompt').value,
+        duration: +document.getElementById('duration').value,
+        steps: +document.getElementById('steps').value,
+        waypoints,
+        hand_keys: handKeys,
+        hand_anchor: 'fingertip',
+        // The viewer knows the table: stand just outside its front edge
+        // (top is centered at z=1.4, depth 0.7 => front edge z=1.05).
+        body_keys: handKeys.map(k => ({
+          x: Math.max(-0.7, Math.min(0.7, k.x)),
+          z: 1.05 - 0.18,
+        })),
+      }),
+    });
+    if (!res.ok) throw new Error(`${res.status}: ${(await res.text()).slice(0, 400)}`);
+    motion = await res.json();
+    buildFigure(motion.joint_names.length, motion.parents);
+    scrub.max = motion.frames.length - 1;
+    document.getElementById('transport').style.display = 'flex';
+    playing = true; playBtn.textContent = '⏸';
+    setFrame(0);
+    status.textContent =
+      `Done in ${((performance.now() - t0) / 1000).toFixed(1)}s ` +
+      `(sampling ${motion.gen_seconds}s) — saved to ${motion.session_dir}`;
+    refreshPrompts();
+  } catch (e) {
+    status.textContent = 'Error: ' + e.message;
+  } finally {
+    stopProgressPoll();
+    genBtn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>

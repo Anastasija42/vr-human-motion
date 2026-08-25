@@ -1,0 +1,9 @@
+# Backend (generation/server.py). Python 3.10, CUDA GPU recommended (12 GB+).
+# Kimodo itself is installed from the local checkout:  pip install -e kimodo-src
+torch>=2.5          # install the CUDA build for your driver, e.g. cu128
+fastapi>=0.110
+uvicorn>=0.30
+numpy>=1.26
+pydantic>=2
+transformers>=4.45  # LLM2Vec text encoder (Llama-3-8B, gated on Hugging Face)
+peft>=0.12

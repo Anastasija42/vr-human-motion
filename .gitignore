@@ -1,0 +1,33 @@
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# generated data (keep the small prompt-embedding cache, drop sessions/logs)
+data/sessions/
+data/*.log
+data/embedding_cache/archive/
+
+# Kimodo upstream checkout — install via `pip install -e kimodo-src` after cloning
+# (see README); comment this line out if you vendor it into the repo
+kimodo-src/
+
+# unity (if the project is copied under unity/)
+unity/**/Library/
+unity/**/Temp/
+unity/**/Logs/
+unity/**/obj/
+unity/**/UserSettings/
+unity/**/Recordings/
+unity/**/*.csproj
+unity/**/*.sln
+unity/**/*.slnx
+unity/**/KimodoConfigs/
+
+# latex
+docs/report/*.aux
+docs/report/*.log
+docs/report/*.out
+docs/report/*.bbl
+docs/report/*.blg
+docs/report/*.pdf
