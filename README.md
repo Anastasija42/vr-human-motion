@@ -103,7 +103,8 @@ went stale (typical after the laptop slept) — just restart the process.
 | **X** tap / hold | snap a pose (stick-figure ghost) / open the panel (prompts + controls) |
 | **A** | generate — with a person selected: queue a follow-up action |
 | **B** tap / hold | next prompt, or select the person the laser points at / start typing (virtual keyboard) |
-| sticks (selected) | move · rotate · cut clip (R up/down) |
+| sticks (selected) | move (L) · rotate (R left/right) · raise/lower (R up/down) |
+| laser on the menu | cut IN / cut OUT at the playhead · full clip · prompts · type · delete |
 | R-grip | clear everything |
 
 | Desktop | |
@@ -112,7 +113,7 @@ went stale (typical after the laptop slept) — just restart the process.
 | **X** / **H** | snap pose / simulated rig (WASD, QE, RMB look, Ctrl/Shift hands) |
 | **G** / **J** | generate / save config to `KimodoConfigs/` and generate from it |
 | **P** / **T** | cycle / type a prompt (typing only sets it — G/A generates) |
-| click a person | 1–9 or T new behavior · N follow-up · `[` `]` F cut · arrows , . R move · Del |
+| click a person | 1–9 or T new behavior · N follow-up · `[` `]` F cut · arrows , . R move/rotate · PgUp/PgDn up/down · Del |
 | Tab / F1 / F2 / F3 | panels · tutorial · input readout · spectator camera for recording |
 
 Keep prompts full sentences ("A person crouches and reaches forward.") — terse

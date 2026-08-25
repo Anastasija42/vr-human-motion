@@ -77,7 +77,7 @@ ax.text(axx, ay, "A", color=WARM, fontsize=13, ha="center", va="center", fontwei
 label(9.4, 6.5, 12.75, 7.15, "hold — TRACE TOUCH", WARM, "right")
 label(axx + 0.22, ay, 12.75, 4.5, "A — GENERATE\n(selected: follow-up)", WARM, "right")
 label(bx + 0.22, by + 0.08, 12.75, 5.95, "B tap — prompt / select\nB HOLD — type (VR keyboard)", TXT, "right")
-label(rsx, rsy + 0.36, 6.5, 2.5, "R-stick — rotate person\ncut up/down · scroll · dist", ACC, "center")
+label(rsx, rsy + 0.36, 6.5, 2.5, "R-stick — rotate · raise/lower\nscroll prompts · panel dist", ACC, "center")
 
 ax.text(6.5, 1.5, "your hands show as controllers with a LASER from the right one —",
         color=TXT, fontsize=12.5, ha="center")

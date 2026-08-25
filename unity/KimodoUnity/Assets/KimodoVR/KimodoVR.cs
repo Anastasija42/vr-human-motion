@@ -14,7 +14,7 @@
 //   X tap / hold     snap a pose / open-close the panel   (L-grip = pose alt)
 //   A                generate  (selected person: queue a follow-up action)
 //   B tap / hold     next prompt or select the pointed person / start typing
-//   sticks           selected person: move (L), rotate + cut up/down (R);
+//   sticks           selected person: move (L), rotate + raise/lower (R);
 //                    panel: move (L), scroll prompts (R l/r), distance (R f/b)
 //   R-grip           clear everything
 // Desktop
@@ -22,7 +22,7 @@
 //   X pose · H sim rig (WASD/QE, RMB look, Ctrl/Shift hands) · G generate
 //   J save config + generate · P/T cycle/type prompt · C clear · Tab panels
 //   click a person: 1-9/T behavior · N follow-up · [ ] F cut · arrows , . R
-//   move/rotate/reset · Del remove · Esc close
+//   move/rotate/reset · PgUp/PgDn up/down · Del remove · Esc close
 //   F1 tutorial · F2 input readout · F3 spectator camera (recording)
 
 using System;
@@ -507,9 +507,8 @@ public class KimodoVR : MonoBehaviour
                          * (0.9f * Time.deltaTime));
             if (Mathf.Abs(rAxis.x) > 0.25f)
                 pd.Rotate(rAxis.x * 70f * Time.deltaTime);
-            // right stick up/down = mark cut start/end at the playhead
-            if (Pressed("cutin", rAxis.y > 0.7f)) pd.SetCutIn(pd.ClipTime);
-            if (Pressed("cutout", rAxis.y < -0.7f)) pd.SetCutOut(pd.ClipTime);
+            if (Mathf.Abs(rAxis.y) > 0.25f)   // right stick up/down = raise / lower
+                pd.Nudge(Vector3.up * (rAxis.y * 0.5f * Time.deltaTime));
             // A on a selected person queues the current prompt as a follow-up.
             if (Pressed("a", aBtn))
             {
@@ -607,8 +606,8 @@ public class KimodoVR : MonoBehaviour
                      PersonAlongRay(new Ray(rpos, rrot * Vector3.forward)) is Performer selP)
             {
                 OpenPopup(selP);
-                SetStatus($"SELECTED person {people.IndexOf(selP) + 1} — sticks move/rotate · " +
-                          "R-stick up/down cut · A follow-up · X delete · B release");
+                SetStatus($"SELECTED person {people.IndexOf(selP) + 1} — sticks move/rotate/up-down · " +
+                          "laser rows cut · A follow-up · X delete · B release");
             }
             else CyclePrompt();
         }
@@ -1052,8 +1051,10 @@ public class KimodoVR : MonoBehaviour
         if (p.Dir != null && !queueMode)
         {
             Row(-11); sb.Append(" <color=#8fd0ff>N</color>  queue a follow-up action"); End();
-            Row(-14); sb.Append(" <color=#8fd0ff>R-stick ↑↓</color>  cut   <color=#8fd0ff>F / click here</color>  full clip"); End();
-            Row(-1); sb.Append(" <color=#8fd0ff>arrows</color>  move   <color=#8fd0ff>, .</color>  rotate   <color=#8fd0ff>R</color>  reset"); End();
+            Row(-15); sb.Append(" <color=#8fd0ff>[</color> / click  cut IN at the playhead"); End();
+            Row(-16); sb.Append(" <color=#8fd0ff>]</color> / click  cut OUT at the playhead"); End();
+            Row(-14); sb.Append(" <color=#8fd0ff>F</color> / click  full clip"); End();
+            Row(-1); sb.Append(" <color=#8fd0ff>arrows</color> move  <color=#8fd0ff>PgUp/PgDn</color> up/down  <color=#8fd0ff>, .</color> rotate  <color=#8fd0ff>R</color> reset"); End();
         }
         if (!queueMode) { Row(-12); sb.Append(" <color=#ff8f8f>Del</color>  remove person"); End(); }
         Row(-13); sb.Append(" <color=#8fd0ff>Esc</color>  ").Append(queueMode ? "back" : "close"); End(true);
@@ -1205,7 +1206,7 @@ public class KimodoVR : MonoBehaviour
     // Keep the stacked HUD sections (controls, then map) flowing tidily.
     void LayoutHudStack()
     {
-        float ch = controlsOpen ? 330 : 30;
+        float ch = controlsOpen ? 350 : 30;
         controlsPanel.rectTransform.sizeDelta = new Vector2(460, ch);
         if (mapPanel != null)
         {
@@ -1279,6 +1280,8 @@ public class KimodoVR : MonoBehaviour
             if (kb.rightArrowKey.isPressed) nd += Vector3.right;
             if (kb.leftArrowKey.isPressed) nd += Vector3.left;
             if (nd != Vector3.zero) d.Nudge(CamYaw() * nd * (0.8f * Time.deltaTime));
+            if (kb.pageUpKey.isPressed) d.Nudge(Vector3.up * (0.5f * Time.deltaTime));
+            if (kb.pageDownKey.isPressed) d.Nudge(Vector3.down * (0.5f * Time.deltaTime));
             if (kb.commaKey.isPressed) d.Rotate(-70f * Time.deltaTime);
             if (kb.periodKey.isPressed) d.Rotate(70f * Time.deltaTime);
             if (kb.rKey.wasPressedThisFrame) d.ResetAdjust();
@@ -1569,6 +1572,16 @@ public class KimodoVR : MonoBehaviour
             {
                 target.Dir.ResetCut();
                 SetStatus("Full clip restored.");
+            }
+            else if (code == -15 && target != null && target.Dir != null)
+            {
+                target.Dir.SetCutIn(target.Dir.ClipTime);
+                SetStatus($"Cut IN at {target.Dir.ClipTime:0.0}s.");
+            }
+            else if (code == -16 && target != null && target.Dir != null)
+            {
+                target.Dir.SetCutOut(target.Dir.ClipTime);
+                SetStatus($"Cut OUT at {target.Dir.ClipTime:0.0}s.");
             }
             else if (code == -12) DeletePerson(target);
             else if (code == -13)
@@ -2418,7 +2431,7 @@ public class KimodoVR : MonoBehaviour
         vrGuideKeys.text =
             "<color=#ffd479><b>CONTROLS</b></color>\n" +
             "R-trig tap\nR-trig hold\nL-trig hold\nX tap\n" +
-            "A · B tap\nB hold\npoint + B\nsticks\nX hold";
+            "A · B tap\nB hold\npoint + B\nsticks\nmenu rows\nX hold";
 
         var tutGo = new GameObject("VrTutorial");
         boardTut = tutGo.AddComponent<TextMesh>();
@@ -2437,7 +2450,8 @@ public class KimodoVR : MonoBehaviour
             "generate · next prompt\n" +
             "type (laser + trigger)\n" +
             "select person\n" +
-            "move · rotate · cut ↑/↓\n" +
+            "move · rotate · up/down\n" +
+            "laser: cut in/out · full\n" +
             "this panel";
         vrHud.gameObject.SetActive(false);
 
@@ -2551,7 +2565,7 @@ public class KimodoVR : MonoBehaviour
         controlsKeys.text =
             "\nL-click\nR-click\nX\nH\n" +
             "\nG / J\nP / T\nC\n" +
-            "\n1-9 / T\nN\n[ ] F\narrows , .\nDel";
+            "\n1-9 / T\nN\n[ ] F\narrows , .\nPgUp PgDn\nDel";
 
         var cbodyGo = new GameObject("Body");
         controlsBody = cbodyGo.AddComponent<Text>();
@@ -2581,6 +2595,7 @@ public class KimodoVR : MonoBehaviour
             "queue follow-up action\n" +
             "cut start/end · full clip\n" +
             "move · rotate  (R resets)\n" +
+            "raise / lower\n" +
             "remove person";
         keysGo.SetActive(false);
         cbodyGo.SetActive(false);
